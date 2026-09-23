@@ -12,6 +12,7 @@ import streamlit as st
 from dotenv import load_dotenv
 
 import json
+from html import escape
 from automatic import brief
 from ai_brief import explain
 from providers import Official, demo, DataError
@@ -31,7 +32,7 @@ st.markdown("""
 <style>
 :root { --bg:#071326; --panel:#0c1b31; --panel2:#10213b; --line:#203655; --text:#edf4ff; --muted:#8294b2; --green:#19d6a1; --blue:#4d8dff; --purple:#9b70ff; --red:#ff647c; }
 .stApp { background: radial-gradient(circle at 70% -10%, #122b50 0, #071326 42%, #06101f 100%); color:var(--text); }
-.block-container { max-width: 1500px; padding-top: 1.2rem; }
+.block-container { max-width: 1700px; padding-top: 1.5rem; padding-bottom: 3rem; }
 h1,h2,h3 { letter-spacing:-.04em; color:var(--text); }
 .stMarkdown, .stCaption, p, label { color:var(--text); }
 div[data-testid="stMetric"] { background:linear-gradient(145deg,#0d1d34,#0a1729); border:1px solid var(--line); border-radius:14px; padding:12px 16px; box-shadow:0 8px 24px #0003; }
@@ -45,20 +46,29 @@ section[data-testid="stSidebar"] .stButton button { border:0; background:transpa
 div[data-testid="stDataFrame"] { border:1px solid var(--line); border-radius:12px; overflow:hidden; }
 .dashboard-title { font-size:2rem; font-weight:750; margin: .2rem 0 .1rem; }
 .dashboard-subtitle { color:#8da0bd; margin-bottom:1.1rem; }
-.dashboard-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:16px 0 20px; }
-.d-card { background:linear-gradient(145deg,#0e2038,#0a1729); border:1px solid var(--line); border-radius:14px; padding:16px; min-height:112px; box-shadow:0 8px 28px #0002; }
+.dashboard-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin:20px 0 16px; }
+.d-card { background:linear-gradient(145deg,#17283e,#101e31); border:1px solid #29415d; border-radius:14px; padding:20px; min-height:128px; box-shadow:0 8px 28px #0002; }
 .d-label { color:#8294b2; font-size:.82rem; }
 .d-value { color:#f5f8ff; font-size:1.55rem; font-weight:750; margin:8px 0; }
 .d-up { color:var(--green); font-weight:650; }
 .d-blue { color:#5da0ff; font-weight:650; }
 .d-purple { color:#a77bff; font-weight:650; }
-.section-card { background:#0b1a2f; border:1px solid var(--line); border-radius:14px; padding:18px; }
-@media (max-width: 900px) { .dashboard-grid { grid-template-columns:repeat(2,1fr); } }
+.section-card { background:linear-gradient(145deg,#17283e,#101e31); border:1px solid #29415d; border-radius:14px; padding:22px; min-height:280px; }
+.section-card h3 { margin:0 0 8px; font-size:1.15rem; }
+.section-card .hint { color:#8da0bd; font-size:.88rem; }
+.empty-chart { height:195px; margin-top:20px; display:flex; align-items:center; justify-content:center; text-align:center; color:#8da0bd; border:1px dashed #36506c; border-radius:10px; background:repeating-linear-gradient(0deg,transparent 0,transparent 43px,#20344c 44px); }
+.watch-row { display:grid; grid-template-columns:2fr 1fr 1fr; gap:12px; padding:13px 0; border-bottom:1px solid #263a52; align-items:center; }
+.watch-row:last-child { border-bottom:0; }
+.watch-row.head { color:#8da0bd; font-size:.8rem; }
+.muted { color:#8da0bd; }
+section[data-testid="stSidebar"] { min-width:240px; }
+section[data-testid="stSidebar"] h2 { font-size:1.15rem; }
+@media (max-width: 900px) { .dashboard-grid { grid-template-columns:repeat(2,1fr); } .block-container { padding-left:1rem; padding-right:1rem; } }
+@media (max-width: 560px) { .dashboard-grid { grid-template-columns:1fr; } }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="dashboard-title">Stock Dash</div><div class="dashboard-subtitle">내 관심종목 · 퀀트 투자 분석 보드</div>', unsafe_allow_html=True)
-st.markdown('<div class="section-card">종목명 또는 종목코드를 검색하면 공식 시세·재무·공시를 한 화면에서 분석합니다.</div>', unsafe_allow_html=True)
+st.markdown('<div class="dashboard-title">주식 대시보드</div><div class="dashboard-subtitle">시장을 보는 새로운 시선, 더 나은 투자의 시작입니다.</div>', unsafe_allow_html=True)
 
 password = os.getenv("APP_PASSWORD", "")
 if password and not st.session_state.get("authorized"):
@@ -216,7 +226,11 @@ latest = st.session_state.get("latest_analysis")
 if latest:
     choices[latest["code"]] = latest
 with st.sidebar:
-    st.header("내 분석 기록")
+    st.header("▥ 투자노트")
+    st.caption("더 나은 오늘의 투자")
+    st.markdown("**▣ 대시보드**  \n◈ 포트폴리오  \n♡ 관심종목  \n▤ 분석 기록  \n⚙ 설정")
+    st.divider()
+    st.subheader("내 분석 기록")
     st.caption("앱 버전 · 연결 진단 01")
     if not sample_mode:
         with st.expander("API 연결 상태 확인"):
@@ -292,42 +306,53 @@ with st.sidebar:
 report = stock.get("report")
 is_demo = stock["code"] == "SAMPLE"
 
-# --- Stock Dash visual dashboard shell ---
+# --- Dashboard overview; portfolio figures require holdings data that this app does not store. ---
 if report:
     result_preview = brief(report)
     fair_preview = result_preview.get("fair")
     growth_preview = result_preview.get("growth", "보류")
     value_preview = result_preview.get("value", "보류")
     current_price = report.get("price")
-    cards = [
-        ("기준 종가", f"{current_price:,.0f}원" if current_price is not None else "—", "공식 일별 시세", "d-blue"),
-        ("성장", str(growth_preview), "최근 결산 기준", "d-up"),
-        ("가치 판단", str(value_preview), "과거 배수 참고", "d-purple"),
-        ("적정주가 참고값", f"{fair_preview['base']:,.0f}원" if fair_preview else "계산 자료 부족", "예측값이 아닌 참고 범위", "d-up"),
-    ]
+    cards = [("총 자산", "—", "보유 수량 데이터 없음", "d-blue"),
+             ("오늘 수익", "—", "매입가·보유 수량 데이터 없음", "d-up"),
+             ("선택 종목 기준 종가", f"₩{current_price:,.0f}" if current_price is not None else "—", "가상 예시" if is_demo else str(report.get("price_date", "공식 일별 시세")), "d-blue"),
+             ("관심종목", str(len(choices)) if not is_demo else "0", "저장된 종목 수", "d-purple")]
 else:
-    cards = [
-        ("관심종목", str(len(choices)), "저장된 종목", "d-blue"),
-        ("분석 상태", "대기", "종목을 검색해 시작", "d-purple"),
-        ("시세", "—", "공식 데이터 연결 후 표시", "d-up"),
-        ("퀀트 진단", "—", "재무 자료 수집 후 표시", "d-up"),
-    ]
+    cards = [("총 자산", "—", "보유 수량 데이터 없음", "d-blue"),
+             ("오늘 수익", "—", "매입가·보유 수량 데이터 없음", "d-up"),
+             ("선택 종목 기준 종가", "—", "종목 분석 후 표시", "d-blue"),
+             ("관심종목", str(len(choices)), "저장된 종목 수", "d-purple")]
 
 st.markdown(
     '<div class="dashboard-grid">' +
-    ''.join(f'<div class="d-card"><div class="d-label">{label}</div><div class="d-value">{value}</div><div class="{cls}">{sub}</div></div>' for label,value,sub,cls in cards) +
+    ''.join(f'<div class="d-card"><div class="d-label">{escape(label)}</div><div class="d-value">{escape(value)}</div><div class="{cls}">{escape(sub)}</div></div>' for label,value,sub,cls in cards) +
     '</div>',
     unsafe_allow_html=True
 )
 
-watch_html = '<div class="section-card"><b>관심종목</b><br><span style="color:#8294b2">저장된 종목</span><br><br>'
-for item in list(choices.values())[:6]:
-    name = item.get("name","")
-    code = item.get("code","")
-    kind = item.get("kind","관심")
-    watch_html += f'<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #172b46"><span>{name}<small style="color:#7185a4"> · {code if not str(code).startswith("pending-") else "코드 확인 대기"}</small></span><span style="color:#4d8dff">{kind}</span></div>'
+left, right = st.columns([1.7, 1], gap="medium")
+with left:
+    st.markdown('<div class="section-card"><h3>▥ 포트폴리오 총 자산 추이</h3><div class="hint">기간별 자산 변화를 확인하세요.</div><div class="empty-chart">보유 종목의 수량과 매입가가 등록되면<br>자산 추이를 표시할 수 있습니다.</div></div>', unsafe_allow_html=True)
+with right:
+    st.markdown('<div class="section-card"><h3>◉ 포트폴리오 자산 비중</h3><div class="hint">종목별 투자 비중</div><div class="empty-chart">보유 수량 데이터가 없어<br>자산 비중을 계산할 수 없습니다.</div></div>', unsafe_allow_html=True)
+
+watch_html = '<div class="section-card"><h3>★ 관심종목</h3><div class="hint">저장된 종목의 마지막 분석 시세</div><div class="watch-row head"><span>종목명</span><span>기준 종가</span><span>구분</span></div>'
+for item in list(choices.values())[:8]:
+    name = escape(str(item.get("name", "")))
+    code = str(item.get("code", ""))
+    shown_code = escape(code if not code.startswith("pending-") else "코드 확인 대기")
+    snapshot = item.get("price_snapshot") or {}
+    price = snapshot.get("price") or (item.get("report") or {}).get("price")
+    price_text = f'₩{price:,.0f}' if isinstance(price, (int, float)) else '—'
+    watch_html += f'<div class="watch-row"><span>{name} <small class="muted">{shown_code}</small></span><span>{price_text}</span><span class="d-blue">{escape(str(item.get("kind", "관심")))}</span></div>'
+if not choices or (is_demo and sample_mode):
+    watch_html += '<p class="muted">저장된 관심종목이 없습니다. 종목을 검색해 분석해 보세요.</p>'
 watch_html += '</div>'
-st.markdown(watch_html, unsafe_allow_html=True)
+left, right = st.columns([1.7, 1], gap="medium")
+with left:
+    st.markdown(watch_html, unsafe_allow_html=True)
+with right:
+    st.markdown('<div class="section-card"><h3>▤ 주요 투자 뉴스</h3><div class="hint">시장 소식</div><div class="empty-chart">뉴스 제공 데이터가 연결되면<br>최근 기사를 표시합니다.</div></div>', unsafe_allow_html=True)
 
 st.subheader(stock["name"] + (" · 가상 예시" if is_demo else " · "+("코드 확인 대기" if stock["code"].startswith("pending-") else stock["code"])))
 if not is_demo:
