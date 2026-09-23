@@ -18,7 +18,7 @@ from providers import Official, demo, DataError
 from storage import Store
 
 load_dotenv()
-st.set_page_config(page_title="PlanX · 내 관심종목", page_icon="📊", layout="wide")
+st.set_page_config(page_title="Stock Dash · 퀀트 보드", page_icon="📈", layout="wide", initial_sidebar_state="expanded")
 # Streamlit root-level secrets become env vars, but explicit loading is clearer.
 try:
     for key in ["APP_PASSWORD", "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "DATA_GO_KR_SERVICE_KEY", "DART_CRTFC_KEY", "OPENAI_API_KEY", "OPENAI_MODEL"]:
@@ -27,9 +27,38 @@ try:
 except FileNotFoundError:
     pass
 
-st.title("내 관심종목 퀀트 보드")
-st.caption("종목명을 입력하면 공식 실적·가치·사업 분석을 가져오고 기록합니다.")
-st.markdown("<style>.stMetric{border:1px solid #e7d9c4;padding:16px;border-radius:14px}h1,h2,h3{letter-spacing:-.03em}</style>", unsafe_allow_html=True)
+st.markdown("""
+<style>
+:root { --bg:#071326; --panel:#0c1b31; --panel2:#10213b; --line:#203655; --text:#edf4ff; --muted:#8294b2; --green:#19d6a1; --blue:#4d8dff; --purple:#9b70ff; --red:#ff647c; }
+.stApp { background: radial-gradient(circle at 70% -10%, #122b50 0, #071326 42%, #06101f 100%); color:var(--text); }
+.block-container { max-width: 1500px; padding-top: 1.2rem; }
+h1,h2,h3 { letter-spacing:-.04em; color:var(--text); }
+.stMarkdown, .stCaption, p, label { color:var(--text); }
+div[data-testid="stMetric"] { background:linear-gradient(145deg,#0d1d34,#0a1729); border:1px solid var(--line); border-radius:14px; padding:12px 16px; box-shadow:0 8px 24px #0003; }
+div[data-testid="stMetricLabel"] { color:var(--muted); }
+div[data-testid="stMetricValue"] { color:var(--text); }
+section[data-testid="stSidebar"] { background:linear-gradient(180deg,#081529,#06101f); border-right:1px solid #1c304c; }
+section[data-testid="stSidebar"] .stButton button { border:0; background:transparent; text-align:left; }
+.stTabs [data-baseweb="tab-list"] { gap:8px; border-bottom:1px solid var(--line); }
+.stTabs [data-baseweb="tab"] { color:#91a4c2; }
+.stTabs [aria-selected="true"] { color:#fff; }
+div[data-testid="stDataFrame"] { border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+.dashboard-title { font-size:2rem; font-weight:750; margin: .2rem 0 .1rem; }
+.dashboard-subtitle { color:#8da0bd; margin-bottom:1.1rem; }
+.dashboard-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:16px 0 20px; }
+.d-card { background:linear-gradient(145deg,#0e2038,#0a1729); border:1px solid var(--line); border-radius:14px; padding:16px; min-height:112px; box-shadow:0 8px 28px #0002; }
+.d-label { color:#8294b2; font-size:.82rem; }
+.d-value { color:#f5f8ff; font-size:1.55rem; font-weight:750; margin:8px 0; }
+.d-up { color:var(--green); font-weight:650; }
+.d-blue { color:#5da0ff; font-weight:650; }
+.d-purple { color:#a77bff; font-weight:650; }
+.section-card { background:#0b1a2f; border:1px solid var(--line); border-radius:14px; padding:18px; }
+@media (max-width: 900px) { .dashboard-grid { grid-template-columns:repeat(2,1fr); } }
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown('<div class="dashboard-title">Stock Dash</div><div class="dashboard-subtitle">내 관심종목 · 퀀트 투자 분석 보드</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-card">종목명 또는 종목코드를 검색하면 공식 시세·재무·공시를 한 화면에서 분석합니다.</div>', unsafe_allow_html=True)
 
 password = os.getenv("APP_PASSWORD", "")
 if password and not st.session_state.get("authorized"):
@@ -262,6 +291,44 @@ with st.sidebar:
 
 report = stock.get("report")
 is_demo = stock["code"] == "SAMPLE"
+
+# --- Stock Dash visual dashboard shell ---
+if report:
+    result_preview = brief(report)
+    fair_preview = result_preview.get("fair")
+    growth_preview = result_preview.get("growth", "보류")
+    value_preview = result_preview.get("value", "보류")
+    current_price = report.get("price")
+    cards = [
+        ("기준 종가", f"{current_price:,.0f}원" if current_price is not None else "—", "공식 일별 시세", "d-blue"),
+        ("성장", str(growth_preview), "최근 결산 기준", "d-up"),
+        ("가치 판단", str(value_preview), "과거 배수 참고", "d-purple"),
+        ("적정주가 참고값", f"{fair_preview['base']:,.0f}원" if fair_preview else "계산 자료 부족", "예측값이 아닌 참고 범위", "d-up"),
+    ]
+else:
+    cards = [
+        ("관심종목", str(len(choices)), "저장된 종목", "d-blue"),
+        ("분석 상태", "대기", "종목을 검색해 시작", "d-purple"),
+        ("시세", "—", "공식 데이터 연결 후 표시", "d-up"),
+        ("퀀트 진단", "—", "재무 자료 수집 후 표시", "d-up"),
+    ]
+
+st.markdown(
+    '<div class="dashboard-grid">' +
+    ''.join(f'<div class="d-card"><div class="d-label">{label}</div><div class="d-value">{value}</div><div class="{cls}">{sub}</div></div>' for label,value,sub,cls in cards) +
+    '</div>',
+    unsafe_allow_html=True
+)
+
+watch_html = '<div class="section-card"><b>관심종목</b><br><span style="color:#8294b2">저장된 종목</span><br><br>'
+for item in list(choices.values())[:6]:
+    name = item.get("name","")
+    code = item.get("code","")
+    kind = item.get("kind","관심")
+    watch_html += f'<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #172b46"><span>{name}<small style="color:#7185a4"> · {code if not str(code).startswith("pending-") else "코드 확인 대기"}</small></span><span style="color:#4d8dff">{kind}</span></div>'
+watch_html += '</div>'
+st.markdown(watch_html, unsafe_allow_html=True)
+
 st.subheader(stock["name"] + (" · 가상 예시" if is_demo else " · "+("코드 확인 대기" if stock["code"].startswith("pending-") else stock["code"])))
 if not is_demo:
     if st.button("최신 데이터로 다시 분석"):
