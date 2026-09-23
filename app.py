@@ -44,27 +44,37 @@ section[data-testid="stSidebar"] .stButton button { border:0; background:transpa
 .stTabs [data-baseweb="tab"] { color:#91a4c2; }
 .stTabs [aria-selected="true"] { color:#fff; }
 div[data-testid="stDataFrame"] { border:1px solid var(--line); border-radius:12px; overflow:hidden; }
-.dashboard-title { font-size:2rem; font-weight:750; margin: .2rem 0 .1rem; }
+.dashboard-title { font-size:2.15rem; font-weight:750; margin: .2rem 0 .1rem; }
 .dashboard-subtitle { color:#8da0bd; margin-bottom:1.1rem; }
 .dashboard-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin:20px 0 16px; }
-.d-card { background:linear-gradient(145deg,#17283e,#101e31); border:1px solid #29415d; border-radius:14px; padding:20px; min-height:128px; box-shadow:0 8px 28px #0002; }
+.d-card { background:linear-gradient(145deg,#17283e,#101e31); border:1px solid #29415d; border-radius:14px; padding:20px; min-height:128px; box-shadow:0 8px 28px #0002; display:flex; align-items:flex-start; gap:18px; }
+.d-icon { flex:none; width:54px; height:54px; border-radius:12px; display:grid; place-items:center; background:linear-gradient(140deg,#244f86,#173656); color:#64adff; font-size:1.65rem; }
+.d-card:nth-child(2) .d-icon { color:#34dccb; background:linear-gradient(140deg,#155b63,#153849); }
+.d-content { min-width:0; }
 .d-label { color:#8294b2; font-size:.82rem; }
 .d-value { color:#f5f8ff; font-size:1.55rem; font-weight:750; margin:8px 0; }
 .d-up { color:var(--green); font-weight:650; }
 .d-blue { color:#5da0ff; font-weight:650; }
 .d-purple { color:#a77bff; font-weight:650; }
-.section-card { background:linear-gradient(145deg,#17283e,#101e31); border:1px solid #29415d; border-radius:14px; padding:22px; min-height:280px; }
+.section-card { background:linear-gradient(145deg,#17283e,#101e31); border:1px solid #29415d; border-radius:14px; padding:22px; min-height:300px; margin-bottom:16px; }
 .section-card h3 { margin:0 0 8px; font-size:1.15rem; }
 .section-card .hint { color:#8da0bd; font-size:.88rem; }
-.empty-chart { height:195px; margin-top:20px; display:flex; align-items:center; justify-content:center; text-align:center; color:#8da0bd; border:1px dashed #36506c; border-radius:10px; background:repeating-linear-gradient(0deg,transparent 0,transparent 43px,#20344c 44px); }
+.empty-chart { height:205px; margin-top:20px; display:flex; align-items:center; justify-content:center; text-align:center; color:#a4b5ce; border:1px solid #29415d; border-radius:10px; background-image:linear-gradient(#273d56 1px,transparent 1px),linear-gradient(90deg,#273d56 1px,transparent 1px); background-size:100% 48px,12.5% 100%; }
+.empty-chart span,.empty-donut span { background:#112239e8; border-radius:10px; padding:12px 18px; line-height:1.6; }
+.empty-donut { height:225px; display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:center; color:#a4b5ce; }
+.donut-outline { width:118px; height:118px; border:2px dashed #6884a5; border-radius:50%; margin-bottom:12px; position:relative; }
+.donut-outline:after { content:''; position:absolute; inset:28px; border:1px solid #4b6482; border-radius:50%; }
 .watch-row { display:grid; grid-template-columns:2fr 1fr 1fr; gap:12px; padding:13px 0; border-bottom:1px solid #263a52; align-items:center; }
 .watch-row:last-child { border-bottom:0; }
 .watch-row.head { color:#8da0bd; font-size:.8rem; }
 .muted { color:#8da0bd; }
 section[data-testid="stSidebar"] { min-width:240px; }
 section[data-testid="stSidebar"] h2 { font-size:1.15rem; }
+section[data-testid="stSidebar"] .nav-item { display:block; padding:13px 15px; border-radius:10px; color:#bdcce0; text-decoration:none; margin:5px 0; }
+section[data-testid="stSidebar"] .nav-item.active { background:#193b68; color:#77baff; border-left:3px solid #4d8dff; }
+.analysis-heading { margin:5px 0 12px; padding:16px 20px; background:#152840; border:1px solid #29415d; border-radius:12px; font-size:1.1rem; font-weight:700; }
 @media (max-width: 900px) { .dashboard-grid { grid-template-columns:repeat(2,1fr); } .block-container { padding-left:1rem; padding-right:1rem; } }
-@media (max-width: 560px) { .dashboard-grid { grid-template-columns:1fr; } }
+@media (max-width: 560px) { .dashboard-grid { grid-template-columns:1fr; } .d-card { min-height:110px; } .watch-row { grid-template-columns:1.4fr 1fr .8fr; font-size:.85rem; } }
 </style>
 """, unsafe_allow_html=True)
 
@@ -228,7 +238,7 @@ if latest:
 with st.sidebar:
     st.header("▥ 투자노트")
     st.caption("더 나은 오늘의 투자")
-    st.markdown("**▣ 대시보드**  \n◈ 포트폴리오  \n♡ 관심종목  \n▤ 분석 기록  \n⚙ 설정")
+    st.markdown('<a class="nav-item active" href="#dashboard-overview">⌂ &nbsp;대시보드</a><a class="nav-item" href="#selected-stock-analysis">▥ &nbsp;종목 분석</a><a class="nav-item" href="#watchlist">☆ &nbsp;관심종목</a>', unsafe_allow_html=True)
     st.divider()
     st.subheader("내 분석 기록")
     st.caption("앱 버전 · 연결 진단 01")
@@ -324,19 +334,20 @@ else:
              ("관심종목", str(len(choices)), "저장된 종목 수", "d-purple")]
 
 st.markdown(
+    '<div id="dashboard-overview"></div>' +
     '<div class="dashboard-grid">' +
-    ''.join(f'<div class="d-card"><div class="d-label">{escape(label)}</div><div class="d-value">{escape(value)}</div><div class="{cls}">{escape(sub)}</div></div>' for label,value,sub,cls in cards) +
+    ''.join(f'<div class="d-card"><div class="d-icon">{icon}</div><div class="d-content"><div class="d-label">{escape(label)}</div><div class="d-value">{escape(value)}</div><div class="{cls}">{escape(sub)}</div></div></div>' for icon,(label,value,sub,cls) in zip(['▣','▥','⌁','☆'],cards)) +
     '</div>',
     unsafe_allow_html=True
 )
 
 left, right = st.columns([1.7, 1], gap="medium")
 with left:
-    st.markdown('<div class="section-card"><h3>▥ 포트폴리오 총 자산 추이</h3><div class="hint">기간별 자산 변화를 확인하세요.</div><div class="empty-chart">보유 종목의 수량과 매입가가 등록되면<br>자산 추이를 표시할 수 있습니다.</div></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-card"><h3>⌁ 포트폴리오 자산 추이</h3><div class="hint">기간별 자산 변화를 확인하세요.</div><div class="empty-chart"><span>보유 종목을 등록하면<br>자산 추이가 표시됩니다.</span></div></div>', unsafe_allow_html=True)
 with right:
-    st.markdown('<div class="section-card"><h3>◉ 포트폴리오 자산 비중</h3><div class="hint">종목별 투자 비중</div><div class="empty-chart">보유 수량 데이터가 없어<br>자산 비중을 계산할 수 없습니다.</div></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-card"><h3>◉ 자산 구성 현황</h3><div class="hint">종목별 투자 비중</div><div class="empty-donut"><div class="donut-outline"></div><span>보유 수량을 등록하면<br>자산 구성이 표시됩니다.</span></div></div>', unsafe_allow_html=True)
 
-watch_html = '<div class="section-card"><h3>★ 관심종목</h3><div class="hint">저장된 종목의 마지막 분석 시세</div><div class="watch-row head"><span>종목명</span><span>기준 종가</span><span>구분</span></div>'
+watch_html = '<div id="watchlist" class="section-card"><h3>★ 관심종목</h3><div class="hint">저장된 종목의 마지막 분석 시세 · 실시간 가격이 아닙니다.</div><div class="watch-row head"><span>종목명</span><span>기준 종가</span><span>구분</span></div>'
 for item in list(choices.values())[:8]:
     name = escape(str(item.get("name", "")))
     code = str(item.get("code", ""))
@@ -352,9 +363,9 @@ left, right = st.columns([1.7, 1], gap="medium")
 with left:
     st.markdown(watch_html, unsafe_allow_html=True)
 with right:
-    st.markdown('<div class="section-card"><h3>▤ 주요 투자 뉴스</h3><div class="hint">시장 소식</div><div class="empty-chart">뉴스 제공 데이터가 연결되면<br>최근 기사를 표시합니다.</div></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-card"><h3>▤ 투자 뉴스</h3><div class="hint">시장 소식</div><div class="empty-donut"><div class="donut-outline"></div><span>뉴스 데이터 연결 대기<br>최근 기사가 연결되면 표시됩니다.</span></div></div>', unsafe_allow_html=True)
 
-st.subheader(stock["name"] + (" · 가상 예시" if is_demo else " · "+("코드 확인 대기" if stock["code"].startswith("pending-") else stock["code"])))
+st.markdown('<div id="selected-stock-analysis" class="analysis-heading">▥ 선택 종목 분석 &nbsp; '+escape(stock["name"])+( " · 가상 예시" if is_demo else " · "+("코드 확인 대기" if stock["code"].startswith("pending-") else escape(stock["code"])))+'</div>', unsafe_allow_html=True)
 if not is_demo:
     if st.button("최신 데이터로 다시 분석"):
         run_analysis(stock["code"])
