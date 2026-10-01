@@ -1,6 +1,7 @@
 import hmac
 import hashlib
 import re
+import math
 import requests
 from urllib.parse import unquote
 import os
@@ -364,6 +365,60 @@ with left:
     st.markdown(watch_html, unsafe_allow_html=True)
 with right:
     st.markdown('<div class="section-card"><h3>▤ 투자 뉴스</h3><div class="hint">시장 소식</div><div class="empty-donut"><div class="donut-outline"></div><span>뉴스 데이터 연결 대기<br>최근 기사가 연결되면 표시됩니다.</span></div></div>', unsafe_allow_html=True)
+
+st.subheader("관심종목 비교표")
+st.caption("저장된 마지막 분석 결과입니다. 실시간 시세가 아니며, 결산연도와 연결·별도 기준을 함께 확인하세요.")
+comparison_columns = ["종목명", "종목코드", "기준 종가", "시세 기준일", "결산연도", "회계 기준", "매출 성장률", "영업이익률", "종합 점수", "자료 수집일", "데이터 상태"]
+
+
+def comparison_row(item):
+    saved_report = item.get("report") or {}
+    snapshot = item.get("price_snapshot") or {}
+    years = saved_report.get("years") or []
+    metrics = {}
+    if len(years) >= 2:
+        try:
+            metrics = brief(saved_report)
+        except (KeyError, TypeError, ValueError, ZeroDivisionError):
+            pass
+    # A newer price-only lookup must not be replaced by an older report price.
+    price = snapshot.get("price") if snapshot.get("price") is not None else saved_report.get("price")
+    price_date = snapshot.get("date") or saved_report.get("price_date") or "—"
+    if saved_report.get("sample") or item.get("code") == "SAMPLE":
+        status = "가상 예시"
+    elif item.get("analysis_error"):
+        status = "이전 재무 · 갱신 실패" if saved_report else "시세만 조회 · 재무 미수집"
+    elif saved_report:
+        status = "저장된 분석 · 수집일 확인"
+    elif snapshot:
+        status = "시세만 조회 · 재무 미수집"
+    else:
+        status = "분석 대기"
+
+    def number(value):
+        return float(value) if isinstance(value, (int, float)) and math.isfinite(value) else None
+
+    return dict(zip(comparison_columns, [
+        item.get("name", "—"), "코드 확인 대기" if str(item.get("code", "")).startswith("pending-") else item.get("code", "—"),
+        number(price), str(price_date), str(years[-1].get("year", "—")) if years else "—",
+        {"CFS": "연결", "OFS": "별도"}.get(saved_report.get("basis"), saved_report.get("basis") or "—"),
+        number(metrics.get("revenue_growth")), number(metrics.get("margin")), number(metrics.get("total")),
+        str(saved_report.get("fetched") or "—"), status,
+    ]))
+
+
+comparison_rows = [comparison_row(item) for item in choices.values()]
+comparison_frame = pd.DataFrame(comparison_rows, columns=comparison_columns)
+st.dataframe(
+    comparison_frame.style.format(
+        {"기준 종가": "{:,.0f}원", "매출 성장률": "{:+.1f}%", "영업이익률": "{:.1f}%", "종합 점수": "{:.1f}/100"},
+        na_rep="—",
+    ),
+    hide_index=True, use_container_width=True,
+)
+if not comparison_rows:
+    st.info("관심종목을 추가하면 비교표에 표시됩니다. 종목을 분석하면 시세와 재무 지표가 채워집니다.")
+st.caption("열 제목을 클릭해 정렬할 수 있습니다. 자료 부족 시 —로 표시하며, 종합 점수는 모든 평가 항목이 계산될 때만 표시합니다. 종목 분석은 왼쪽 ‘종목 선택’에서 이동하세요.")
 
 st.markdown('<div id="selected-stock-analysis" class="analysis-heading">▥ 선택 종목 분석 &nbsp; '+escape(stock["name"])+( " · 가상 예시" if is_demo else " · "+("코드 확인 대기" if stock["code"].startswith("pending-") else escape(stock["code"])))+'</div>', unsafe_allow_html=True)
 if not is_demo:
