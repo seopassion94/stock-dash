@@ -18,12 +18,13 @@ from automatic import brief
 from ai_brief import explain
 from providers import Official, demo, DataError
 from storage import Store
+from us_search import render_us_search
 
 load_dotenv()
 st.set_page_config(page_title="Stock Dash · 퀀트 보드", page_icon="📈", layout="wide", initial_sidebar_state="expanded")
 # Streamlit root-level secrets become env vars, but explicit loading is clearer.
 try:
-    for key in ["APP_PASSWORD", "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "DATA_GO_KR_SERVICE_KEY", "DART_CRTFC_KEY", "OPENAI_API_KEY", "OPENAI_MODEL"]:
+    for key in ["APP_PASSWORD", "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "DATA_GO_KR_SERVICE_KEY", "DART_CRTFC_KEY", "OPENAI_API_KEY", "OPENAI_MODEL", "ALPHAVANTAGE_API_KEY"]:
         if key in st.secrets:
             os.environ[key] = str(st.secrets[key])
 except FileNotFoundError:
@@ -208,7 +209,14 @@ def run_analysis(code):
         st.error("분석을 마치지 못했습니다. 이전 결과는 유지됩니다. 잠시 후 다시 시도하세요.")
 
 
-if not sample_mode:
+st.subheader("주식 검색")
+search_market = st.radio("검색 시장", ["국내", "미국"], horizontal=True)
+if search_market == "미국":
+    render_us_search(st)
+elif sample_mode:
+    st.caption("국내 실데이터 검색은 APP_PASSWORD와 시세 API 키 설정 후 사용할 수 있습니다.")
+
+if not sample_mode and search_market == "국내":
     with st.form("search"):
         query = st.text_input("종목명 또는 키워드", placeholder="삼성전자 · 삼성 · 하이닉스 · 005930")
         submitted = st.form_submit_button("검색·자동 분석", type="primary")
